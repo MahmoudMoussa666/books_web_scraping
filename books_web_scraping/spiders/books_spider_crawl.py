@@ -1,19 +1,19 @@
 import scrapy
-from scrapy.shell import inspect_response
+from scrapy.linkextractors import LinkExtractor
+from scrapy.spiders import CrawlSpider, Rule
 
 
-class BookscrawlerSpider(scrapy.Spider):
-    name = 'bookscrawler'
+class BooksSpiderCrawlSpider(CrawlSpider):
+    name = 'books_spider_crawl'
     allowed_domains = ['books.toscrape.com']
     start_urls = ['http://books.toscrape.com/']
 
-    def parse(self, response):
-        books = response.css('ol li article')
+    rules = (
+        Rule(LinkExtractor(allow=r"/catalogue/[\w-]+/index\.html"), callback='parse_item', follow=True),
+        Rule(LinkExtractor(allow=r"page"), callback='parse_item', follow=True)
+    )
 
-        for book in books:
-            yield response.follow(book.css('h3 a::attr(href)').get(), callback=self.parse_book)
-
-    def parse_book(self, response):
+    def parse_item(self, response):
         yield {'title': response.css('h1::text').get(),
                'price': response.css('.price_color::text').get(),
                'category': response.xpath('//ul[@class="breadcrumb"]/li[3]/a/text()').get(),
